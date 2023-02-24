@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Homework1_6_8
 {
@@ -19,7 +20,6 @@ namespace Homework1_6_8
     abstract class Fighter
     {
         protected const int FullPercent = 100;
-        protected const int WithoutDamage = 0;
 
         protected int ArmorDefensePercent = 10;
         protected int Health;
@@ -39,7 +39,6 @@ namespace Homework1_6_8
         }
 
         public string Name { get; protected set; }
-
 
         public virtual void TakeDamage(int damage)
         {
@@ -67,24 +66,20 @@ namespace Homework1_6_8
             Console.WriteLine("Броня: " + Armor);
         }
 
-        protected virtual int Attack()
+        public bool IsAlive()
+        {
+            return Health > 0;
+        }
+
+        public abstract void MakeTurnMoves(Fighter defender);
+
+        protected virtual void Attack(Fighter defender)
         {
             Console.WriteLine(Name + " атакует, пытаясь нанести " + Damage + " урона");
-            return Damage;
+            defender.TakeDamage(Damage);
         }
 
-        public bool Leave()
-        {
-            if (Health > 0)
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        abstract protected int EndTurn();
-        abstract public int GetAttackOfTurn();
+        protected abstract void EndTurn();
     }
 
     class Mage: Fighter
@@ -107,6 +102,38 @@ namespace Homework1_6_8
             Console.WriteLine("Мана: " + _mana);
         }
 
+        public override void MakeTurnMoves(Fighter defender)
+        {
+            Console.WriteLine("1. Атака");
+            Console.WriteLine("2. Использовать огненный шар");
+            Console.WriteLine("3. Использовать Маначит");
+
+            if (_mana >= 4)
+            {
+                CastFireball(defender);
+            }
+            else if (_mana <= _manaToCastFireball - 2 && _maxMana > _manaToCastFireball)
+            {
+                Attack(defender);
+            }
+            else
+            {
+                CastManachit();
+            }
+
+            EndTurn();
+        }
+
+        protected override void EndTurn()
+        {
+            _mana++;
+
+            if (_mana > _maxMana)
+            {
+                _mana = _maxMana;
+            }
+        }
+
         private bool TryCastFireball(out int damage)
         {
             if (_mana>=_manaToCastFireball)
@@ -116,16 +143,18 @@ namespace Homework1_6_8
                 return true;
             }
 
+            Console.WriteLine("Не хватает маны");
             damage = 0;
             return false;
         }
 
-        private int CastFireball()
+        private void CastFireball(Fighter defender)
         {
-            TryCastFireball(out int damage);
-            Console.WriteLine(Name + " использует огненный шар, пытаясь нанести " + damage + " урона");
-
-            return damage;
+            if (TryCastFireball(out int damage))
+            {
+                Console.WriteLine(Name + " использует огненный шар, пытаясь нанести " + damage + " урона");
+                defender.TakeDamage(damage);
+            }
         }
 
         private void CastManachit()
@@ -133,44 +162,6 @@ namespace Homework1_6_8
             _maxMana++;
             _mana = _maxMana;
             Console.WriteLine(Name + " использует Маначит, теперь у этого бойца максимум " + _maxMana + " маны");
-        }
-
-        protected override int EndTurn()
-        {
-            _mana++;
-
-            if(_mana>_maxMana)
-            {
-                _mana = _maxMana;
-            }
-
-            return WithoutDamage;
-        }
-
-        public override int GetAttackOfTurn()
-        {
-            int dealtDamage = 0;
-
-            Console.WriteLine("1. Атака");
-            Console.WriteLine("2. Использовать огненный шар");
-            Console.WriteLine("3. Использовать Маначит");
-
-            if(_mana>=4)
-            {
-                dealtDamage += CastFireball();
-            }
-            else if(_mana<= _manaToCastFireball-2 && _maxMana>_manaToCastFireball)
-            {
-                dealtDamage += Attack();
-            }
-            else
-            {
-                CastManachit();
-            }
-
-            dealtDamage+=EndTurn();
-
-            return dealtDamage;
         }
     }
 
@@ -183,10 +174,43 @@ namespace Homework1_6_8
             ClassName = "Воин";
         }
 
-        private int CastShieldSlam()
+        public override void MakeTurnMoves(Fighter defender)
+        {
+            Console.WriteLine("1. Атака");
+            Console.WriteLine("2. Использовать Удар броней");
+            Console.WriteLine("3. Использовать Ярость брони");
+
+            int command = Random.Next(0, 2);
+
+            if (Armor == 0)
+            {
+                CastArmorRage();
+            }
+            else if (Armor > Damage)
+            {
+                CastShieldSlam(defender);
+            }
+            else if (command == 0)
+            {
+                Attack(defender);
+            }
+            else
+            {
+                CastArmorRage();
+            }
+
+            EndTurn();
+        }
+
+        protected override void EndTurn()
+        {
+            Armor += _receivedArmorEndTurn;
+        }
+
+        private void CastShieldSlam(Fighter defender)
         {
             Console.WriteLine(Name + " использует Удар броней и пытается нанести " + Armor + " урона");
-            return Armor;
+            defender.TakeDamage(Armor);
         }
 
         private void CastArmorRage()
@@ -209,44 +233,6 @@ namespace Homework1_6_8
 
             Console.WriteLine(" брони");
         }
-
-        protected override int EndTurn()
-        {
-            Armor += _receivedArmorEndTurn;
-            return WithoutDamage;
-        }
-        
-        public override int GetAttackOfTurn()
-        {
-            int dealtDamage = 0;
-            
-            Console.WriteLine("1. Атака");
-            Console.WriteLine("2. Использовать Удар броней");
-            Console.WriteLine("3. Использовать Ярость брони");
-
-            int command = Random.Next(0, 2);
-
-            if (Armor==0)
-            {
-                CastArmorRage();
-            }
-            else if (Armor>Damage)
-            {
-                dealtDamage+=CastShieldSlam();
-            }
-            else if(command==0)
-            {
-                dealtDamage += Attack();
-            }
-            else
-            {
-                CastArmorRage();
-            }
-
-            dealtDamage+=EndTurn();
-
-            return dealtDamage;
-        }
     }
 
     class Priest:Fighter
@@ -263,16 +249,58 @@ namespace Homework1_6_8
             ClassName = "Жрец";
         }
 
+        public override void TakeDamage(int damage)
+        {
+            base.TakeDamage(damage);
+            _takenDamage += damage * (FullPercent - ArmorDefensePercent * Convert.ToInt32(Convert.ToBoolean(Armor))) / FullPercent;
+        }
+
+        public override void MakeTurnMoves(Fighter defender)
+        {
+            Console.WriteLine("1. Атака");
+            Console.WriteLine("2. Использовать Ярость лечения");
+            Console.WriteLine("3. Использовать Ракамош");
+
+            int command = Random.Next(0, 4);
+
+            if (Health * 2 > MaxHealth)
+            {
+                Attack(defender);
+            }
+            else if (Health * 3 > MaxHealth)
+            {
+                if (command == 0)
+                {
+                    Attack(defender);
+                }
+                else
+                {
+                    CastHealingRage();
+                }
+            }
+            else if (_isCastRakamosh == false)
+            {
+                CastRakamosh();
+            }
+            else
+            {
+                if (command == 1)
+                {
+                    Attack(defender);
+                }
+                else
+                {
+                    CastHealingRage();
+                }
+            }
+
+            EndTurn();
+        }
+
         private void CastHealingRage()
         {
             Damage += _takenDamage * _healingRagePercent/FullPercent;
             Console.WriteLine(Name + " применяет Ярость лечения, атака увеличилась до " + Damage);
-        }
-
-        public override void TakeDamage(int damage)
-        {
-            base.TakeDamage(damage);
-            _takenDamage+= damage * (FullPercent - ArmorDefensePercent * Convert.ToInt32(Convert.ToBoolean(Armor))) / FullPercent;
         }
 
         private void CastRakamosh()
@@ -290,7 +318,7 @@ namespace Homework1_6_8
             }
         }
 
-        protected override int EndTurn()
+        protected override void EndTurn()
         {
             Health += _healingValueEndTurn;
 
@@ -298,54 +326,6 @@ namespace Homework1_6_8
             {
                 Health = MaxHealth;
             }
-
-            return WithoutDamage;
-        }
-
-        public override int GetAttackOfTurn()
-        {
-            int dealtDamage = 0;
-
-            Console.WriteLine("1. Атака");
-            Console.WriteLine("2. Использовать Ярость лечения");
-            Console.WriteLine("3. Использовать Ракамош");
-
-            int command = Random.Next(0, 4);
-
-            if (Health*2>MaxHealth)
-            {
-                dealtDamage+=Attack();
-            }
-            else if (Health * 3 > MaxHealth)
-            {
-                if (command==0)
-                {
-                    dealtDamage += Attack();
-                }
-                else
-                {
-                    CastHealingRage();
-                }
-            }
-            else if (_isCastRakamosh==false)
-            {
-                CastRakamosh();
-            }
-            else
-            {
-                if (command == 1)
-                {
-                    dealtDamage += Attack();
-                }
-                else
-                {
-                    CastHealingRage();
-                }
-            }
-
-            dealtDamage+=EndTurn();
-
-            return dealtDamage;
         }
     }
 
@@ -374,6 +354,38 @@ namespace Homework1_6_8
             Console.WriteLine("Шанс критического урона (x" + _criticalDamageValue + "): " + _criticalDamageChance);
         }
 
+        public override void TakeDamage(int damage)
+        {
+            int dodgeChance = Random.Next(1, FullPercent + 1);
+
+            if (dodgeChance >= _dodgeChance)
+            {
+                base.TakeDamage(damage);
+            }
+            else
+            {
+                Console.WriteLine("Уворот!");
+            }
+        }
+
+        public override void MakeTurnMoves(Fighter defender)
+        {
+            Console.WriteLine("1. Атака");
+            Console.WriteLine("2. Использовать Буйный рост");
+
+            if (_countWildGrowthNow < _countWildGrowthMax)
+            {
+                _countWildGrowthNow++;
+                CastWildGrowth();
+            }
+            else
+            {
+                Attack(defender);
+            }
+
+            EndTurn();
+        }
+
         private void CastWildGrowth()
         {
             _healingValueEndTurn++;
@@ -382,7 +394,7 @@ namespace Homework1_6_8
             Console.WriteLine(Name + " использует Буйный рост. Теперь в конце хода вы получаете " + _healingValueEndTurn + " хп, " + _receivedArmorEndTurn + " брони и прибавку к атаке: " + _damageValueEndTurn);
         }
 
-        protected override int Attack()
+        protected override void Attack(Fighter defender)
         {
             int damage;
             int criticalDamageValue;
@@ -398,25 +410,11 @@ namespace Homework1_6_8
             }
 
             damage = Damage * criticalDamageValue;
+            defender.TakeDamage(damage);
             Console.WriteLine(Name + " атакует, пытаясь нанести " + damage + " урона");
-            return damage;
         }
 
-        public override void TakeDamage(int damage)
-        {
-            int dodgeChance = Random.Next(1, FullPercent + 1);
-
-            if (dodgeChance >= _dodgeChance)
-            {
-                base.TakeDamage(damage);
-            }
-            else
-            {
-                Console.WriteLine("Уворот!");
-            }
-        }
-
-        protected override int EndTurn()
+        protected override void EndTurn()
         {
             Health += _healingValueEndTurn;
 
@@ -427,29 +425,6 @@ namespace Homework1_6_8
 
             Damage += _damageValueEndTurn;
             Armor += _receivedArmorEndTurn;
-            return WithoutDamage;
-        }
-
-        public override int GetAttackOfTurn()
-        {
-            int dealtDamage = 0;
-
-            Console.WriteLine("1. Атака");
-            Console.WriteLine("2. Использовать Буйный рост");
-
-            if (_countWildGrowthNow< _countWildGrowthMax)
-            {
-                _countWildGrowthNow++;
-                CastWildGrowth();
-            }
-            else
-            {
-                dealtDamage += Attack();
-            }
-
-            dealtDamage+=EndTurn();
-
-            return dealtDamage;
         }
     }
 
@@ -499,7 +474,7 @@ namespace Homework1_6_8
             }
         }
 
-        protected override int Attack()
+        protected override void Attack(Fighter defender)
         {
             int damage;
             int criticalDamageValue;
@@ -515,19 +490,17 @@ namespace Homework1_6_8
             }
 
             damage = Damage * criticalDamageValue;
+            defender.TakeDamage(damage);
             Console.WriteLine(Name + " атакует, пытаясь нанести " + damage + " урона");
-            return damage;
         }
 
-        protected override int EndTurn()
+        protected override void EndTurn()
         {
-            return Attack();
+            Attack(defender);
         }
 
-        public override int GetAttackOfTurn()
+        public override void MakeTurnMoves(Fighter defender)
         {
-            int dealtDamage = 0;
-
             Console.WriteLine("1. Атака");
             Console.WriteLine("2. Использовать Тень");
             Console.WriteLine("3. Использовать Подлый трюк");
@@ -544,56 +517,56 @@ namespace Homework1_6_8
             }
             else
             {
-                dealtDamage+=Attack();
+                Attack(defender);
             }
 
-            dealtDamage += EndTurn();
-
-            return dealtDamage;
+            EndTurn();
         }
     }
 
     class Battle
     {
+        const int FirstFighterNumber = 1;
+        const int SecondFighterNumber = 2;
+
         private List<Fighter> _fighters = new List<Fighter>();
-        private List<Fighter> _fightersInBattle=new List<Fighter>();
+        private Fighter _fighter1;
+        private Fighter _fighter2;
 
         public Battle ()
         {
-            _fighters.Add(new Mage(500, 3, 10, "Джайна"));
-            _fighters.Add(new Warrior(500, 15, "Гаррош", 10));
-            _fighters.Add(new Priest(500, 10, "Андуин"));
-            _fighters.Add(new Druid(500, 15, "Малфурион", 5));
+            _fighters.Add(new Mage(800, 3, 10, "Джайна"));
+            _fighters.Add(new Warrior(1000, 15, "Гаррош", 10));
+            _fighters.Add(new Priest(600, 10, "Андуин"));
+            _fighters.Add(new Druid(400, 15, "Малфурион", 5));
             _fighters.Add(new Rogue(400, 20, "Валира"));
         }
 
         public void Fight()
         {
-            if (TryGetFighter() && TryGetFighter())
+            if (TryGetFighter(out Fighter fighter1, FirstFighterNumber) && TryGetFighter(out Fighter fighter2, SecondFighterNumber))
             {
-                while (_fightersInBattle[0].Leave() && _fightersInBattle[1].Leave())
+                _fighter1 = fighter1;
+                _fighter2 = fighter2;
+
+                while (_fighter1.IsAlive() && _fighter2.IsAlive())
                 {
                     Console.Clear();
-                    _fightersInBattle[1].TakeDamage(_fightersInBattle[0].GetAttackOfTurn());
-                    _fightersInBattle[0].TakeDamage(_fightersInBattle[1].GetAttackOfTurn());
+                    _fighter1.MakeTurnMoves(_fighter2);
+                    _fighter2.MakeTurnMoves(_fighter1);
+                    ShowFighterInfo(_fighter1, FirstFighterNumber);
+                    ShowFighterInfo(_fighter2, SecondFighterNumber);
                     Console.WriteLine("------------------------------");
-                    Console.WriteLine("Игрок 1: ");
-                    _fightersInBattle[0].ShowInfo();
-                    Console.WriteLine();
-                    Console.WriteLine();
-                    Console.WriteLine("Игрок 2: ");
-                    _fightersInBattle[1].ShowInfo();
-                    Console.WriteLine("------------------------------");
-                    Console.ReadLine();
+                    Console.ReadKey();
                 }
 
-                if (_fightersInBattle[0].Leave())
+                if (_fighter1.IsAlive())
                 {
-                    Console.WriteLine("Победитель - " + _fightersInBattle[0].Name);
+                    Console.WriteLine("Победитель - " + _fighter1.Name);
                 }
-                else if (_fightersInBattle[1].Leave())
+                else if (_fighter2.IsAlive())
                 {
-                    Console.WriteLine("Победитель - " + _fightersInBattle[1].Name);
+                    Console.WriteLine("Победитель - " + _fighter2.Name);
                 }
                 else
                 {
@@ -602,7 +575,15 @@ namespace Homework1_6_8
             }
         }
 
-        private bool TryGetFighter()
+        private void ShowFighterInfo(Fighter fighter, int fighterNumber)
+        {
+            Console.WriteLine("------------------------------");
+            Console.WriteLine("Игрок " + fighterNumber + ": ");
+            fighter.ShowInfo();
+            Console.WriteLine();
+        }
+
+        private bool TryGetFighter(out Fighter fighter, int addedFighterInBattleNumber)
         {
             Console.Clear();
 
@@ -613,13 +594,13 @@ namespace Homework1_6_8
                 Console.WriteLine();
             }
 
-            Console.Write("Выберите номер " + (_fightersInBattle.Count+1) + "-го бойца: ");
+            Console.Write("Выберите номер " + addedFighterInBattleNumber + "-го бойца: ");
 
             if (int.TryParse(Console.ReadLine(), out int fighterNumber))
             {
                 if (fighterNumber >= 1 && fighterNumber <= _fighters.Count)
                 {
-                    _fightersInBattle.Add(_fighters[fighterNumber - 1]);
+                    fighter=_fighters[fighterNumber - 1];
                     _fighters.Remove(_fighters[fighterNumber - 1]);
                     return true;
                 }
@@ -633,6 +614,7 @@ namespace Homework1_6_8
                 Console.WriteLine("Введено некорректное значение");
             }
 
+            fighter = null;
             return false;
         }
     }
