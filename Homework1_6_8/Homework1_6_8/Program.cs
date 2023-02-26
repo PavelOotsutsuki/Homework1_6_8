@@ -79,7 +79,7 @@ namespace Homework1_6_8
             defender.TakeDamage(Damage);
         }
 
-        protected abstract void EndTurn();
+        protected abstract void EndTurn(Fighter defender);
     }
 
     class Mage: Fighter
@@ -121,10 +121,10 @@ namespace Homework1_6_8
                 CastManachit();
             }
 
-            EndTurn();
+            EndTurn(defender);
         }
 
-        protected override void EndTurn()
+        protected override void EndTurn(Fighter defender)
         {
             _mana++;
 
@@ -199,10 +199,10 @@ namespace Homework1_6_8
                 CastArmorRage();
             }
 
-            EndTurn();
+            EndTurn(defender);
         }
 
-        protected override void EndTurn()
+        protected override void EndTurn(Fighter defender)
         {
             Armor += _receivedArmorEndTurn;
         }
@@ -294,7 +294,7 @@ namespace Homework1_6_8
                 }
             }
 
-            EndTurn();
+            EndTurn(defender);
         }
 
         private void CastHealingRage()
@@ -318,7 +318,7 @@ namespace Homework1_6_8
             }
         }
 
-        protected override void EndTurn()
+        protected override void EndTurn(Fighter defender)
         {
             Health += _healingValueEndTurn;
 
@@ -383,7 +383,7 @@ namespace Homework1_6_8
                 Attack(defender);
             }
 
-            EndTurn();
+            EndTurn(defender);
         }
 
         private void CastWildGrowth()
@@ -414,7 +414,7 @@ namespace Homework1_6_8
             Console.WriteLine(Name + " атакует, пытаясь нанести " + damage + " урона");
         }
 
-        protected override void EndTurn()
+        protected override void EndTurn(Fighter defender)
         {
             Health += _healingValueEndTurn;
 
@@ -494,7 +494,7 @@ namespace Homework1_6_8
             Console.WriteLine(Name + " атакует, пытаясь нанести " + damage + " урона");
         }
 
-        protected override void EndTurn()
+        protected override void EndTurn(Fighter defender)
         {
             Attack(defender);
         }
@@ -520,7 +520,7 @@ namespace Homework1_6_8
                 Attack(defender);
             }
 
-            EndTurn();
+            EndTurn(defender);
         }
     }
 
